@@ -68,7 +68,7 @@ services:
     build: ./api-gateway
     container_name: seatsync-gateway
     ports:
-      - "8080:8080"
+      - "8085:8080"
     depends_on:
       - discovery-server
     environment:
