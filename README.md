@@ -84,6 +84,12 @@ The `/api/payments` endpoint requires a unique `Idempotency-Key` header.
 * On the first request, the transaction is processed and saved to the database.
 * If a network timeout occurs and the client retries with the same key, `booking-service` identifies the key in the database and returns the cached payment response immediately without double-charging the user's card.
 
+### 4. Stateless Session Management & Silent Token Refresh
+SeatSync employs a stateless authentication architecture using JSON Web Tokens (JWT) to secure access across microservices without relying on server-side session memory:
+* **Stateless Sessions:** Upon login, the user receives an `accessToken` (short-lived, e.g. 15 minutes) and a `refreshToken` (long-lived, e.g. 7 days). These are stored in the client's local storage.
+* **Securing Requests:** The React client attaches the `Authorization: Bearer <token>` header to all outgoing API requests routed through the Spring Cloud API Gateway.
+* **Silent Auto-Refresh Loop:** If a request returns `401 Unauthorized` because the access token expired, an Axios interceptor intercepts the response, makes a request to `/api/auth/refresh` using the refresh token, updates local storage with the new token, and seamlessly retries the original user request without logging them out or forcing a page refresh.
+
 ---
 
 ## 🛠️ Tech Stack & Features
