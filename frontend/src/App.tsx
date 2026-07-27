@@ -16,7 +16,11 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col relative">
+          {/* Animated Ambient background lights */}
+          <div className="pulse-glow" style={{ top: '10%', left: '10%' }} />
+          <div className="pulse-glow" style={{ bottom: '15%', right: '10%', animationDelay: '-10s' }} />
+          
           <Navbar />
           <main className="flex-grow">
             <Routes>

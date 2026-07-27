@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { Calendar, MapPin, Clock, AlertCircle, Info } from 'lucide-react';
+import { Calendar, MapPin, Clock, AlertCircle, Info, Landmark } from 'lucide-react';
 
 interface Event {
   id: number;
@@ -49,7 +49,6 @@ export const EventDetails: React.FC = () => {
       setEvent(eventRes.data);
 
       const seatsRes = await api.get(`/api/seats/event/${id}`);
-      // Sort seats by seat number (e.g. A1, A2, B1...)
       const sortedSeats = seatsRes.data.sort((a: Seat, b: Seat) => 
         a.seatNumber.localeCompare(b.seatNumber, undefined, { numeric: true, sensitivity: 'base' })
       );
@@ -72,21 +71,18 @@ export const EventDetails: React.FC = () => {
     setHoldingSeatId(seat.id);
     setError('');
     try {
-      // Call booking-service to place hold / create pending booking
       const response = await api.post('/api/bookings/book', {
         userId: user.id,
         eventId: event?.id,
         seatId: seat.id
       });
-      // Hold successful! Navigate to Checkout
       navigate(`/checkout/${response.data.id}`);
     } catch (err: any) {
       console.error(err);
       setError(
         err.response?.data?.message || 
-        'This seat is currently locked or held by another user. Please select another seat.'
+        'This seat was locked or held by another user. Please select another seat.'
       );
-      // Refresh seats to show updated statuses
       fetchEventAndSeats();
     } finally {
       setHoldingSeatId(null);
@@ -95,50 +91,68 @@ export const EventDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-40">
+      <div className="flex flex-col justify-center items-center py-40 gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-400"></div>
+        <p className="text-gray-500 text-sm font-semibold tracking-wider uppercase animate-pulse">Syncing Seat Inventory...</p>
       </div>
     );
   }
 
   if (error && !event) {
     return (
-      <div className="container mx-auto px-6 py-12 text-center">
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-lg max-w-md mx-auto mb-4 flex items-center gap-2">
+      <div className="container mx-auto px-6 py-12 text-center max-w-md">
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-xl mb-6 flex items-center gap-2 shadow-lg">
           <AlertCircle className="h-5 w-5 shrink-0" />
-          <span>{error}</span>
+          <span className="text-sm font-bold">{error}</span>
         </div>
-        <button onClick={fetchEventAndSeats} className="text-emerald-400 hover:underline cursor-pointer">Retry</button>
+        <button 
+          onClick={fetchEventAndSeats} 
+          className="bg-white/5 border border-white/10 px-5 py-2.5 rounded-xl text-emerald-400 font-bold hover:bg-white/10 cursor-pointer"
+        >
+          Retry Connection
+        </button>
       </div>
     );
   }
 
   if (!event) return null;
 
+  // Group seats by row character for cleaner visualization
+  const groupedSeats: { [key: string]: Seat[] } = {};
+  seats.forEach(seat => {
+    const row = seat.seatNumber.match(/[A-Z]+/)?.[0] || 'A';
+    if (!groupedSeats[row]) {
+      groupedSeats[row] = [];
+    }
+    groupedSeats[row].push(seat);
+  });
+
   return (
-    <div className="container mx-auto px-6 py-8">
-      {/* Event Header Card */}
-      <div className="glass-panel p-8 rounded-2xl mb-8 relative overflow-hidden shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-4">
-            <span className="bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+    <div className="container mx-auto px-8 py-12 max-w-7xl">
+      {/* Event Details Jumbotron Card */}
+      <div className="glass-panel p-8 md:p-12 rounded-3xl mb-12 relative overflow-hidden shadow-2xl border border-white/5 glow-border">
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none pulse-light" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-5">
+            <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xxs font-extrabold px-3.5 py-2 rounded-full uppercase tracking-widest shadow-sm inline-block">
               {event.status}
             </span>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white">{event.title}</h1>
-            <p className="text-gray-400 max-w-3xl">{event.description || 'No description available for this event.'}</p>
+            <h1 className="text-4xl md:text-5xl font-black text-white leading-none tracking-tight">{event.title}</h1>
+            <p className="text-gray-400 max-w-4xl text-base leading-relaxed">
+              {event.description || 'Join us for this live event. Lock in your tickets instantly. Holds release in 5 minutes if not completed.'}
+            </p>
             
-            <div className="flex flex-wrap items-center gap-6 text-gray-300 text-sm">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-gray-300 text-sm font-medium pt-3 border-t border-white/5">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-emerald-400" />
+                <Calendar className="h-4.5 w-4.5 text-emerald-400" />
                 <span>{event.date}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-emerald-400" />
+                <Clock className="h-4.5 w-4.5 text-emerald-400" />
                 <span>{event.time}</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-emerald-400" />
+                <MapPin className="h-4.5 w-4.5 text-emerald-400" />
                 <span>{event.venue.name}, {event.venue.location}</span>
               </div>
             </div>
@@ -147,98 +161,134 @@ export const EventDetails: React.FC = () => {
       </div>
 
       {error && (
-        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4 rounded-xl mb-8 flex items-center gap-3 max-w-2xl mx-auto shadow-md">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <p className="text-sm font-semibold">{error}</p>
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 p-4.5 rounded-2xl mb-8 flex items-center gap-3 max-w-3xl mx-auto shadow-lg animate-pulse">
+          <AlertCircle className="h-5.5 w-5.5 shrink-0 text-rose-400" />
+          <p className="text-sm font-bold leading-normal">{error}</p>
         </div>
       )}
 
-      {/* Seat Selection Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Seat Map */}
-        <div className="lg:col-span-2 glass-panel p-8 rounded-2xl shadow-xl flex flex-col items-center">
-          <h2 className="text-xl font-bold text-white mb-6 text-center w-full border-b border-white/5 pb-4">
-            Select Your Seats
+      {/* Main Reservation Seat selection */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
+        
+        {/* Seating Grid map */}
+        <div className="lg:col-span-2 glass-panel p-8 md:p-10 rounded-3xl shadow-2xl border border-white/5 flex flex-col items-center">
+          <h2 className="text-xl font-bold tracking-tight text-white mb-8 text-center w-full border-b border-white/5 pb-4.5 uppercase tracking-wider">
+            VENUE SEATING MAP
           </h2>
 
-          {/* Screen Indicator */}
-          <div className="w-full max-w-md bg-gradient-to-b from-emerald-500/30 to-transparent h-6 rounded-b-[40px] text-center text-xs font-bold text-emerald-400/80 tracking-[0.2em] mb-12 shadow-inner border-t border-emerald-500/20">
+          {/* Screen / Stage indicator */}
+          <div className="w-full max-w-lg bg-gradient-to-b from-indigo-500/15 via-indigo-500/5 to-transparent h-10 rounded-b-[60px] text-center text-xs font-extrabold text-indigo-300/80 tracking-[0.3em] mb-16 shadow-inner border-t border-indigo-500/20">
             STAGE / SCREEN
           </div>
 
-          {/* Seat Grid */}
-          <div className="grid grid-cols-10 gap-3 max-w-lg mx-auto mb-8">
-            {seats.map((seat) => {
-              const isAvailable = seat.status === 'AVAILABLE';
-              const isHeld = seat.status === 'HELD';
-              const isBooked = seat.status === 'BOOKED';
-              const isHolding = holdingSeatId === seat.id;
+          {/* Seating row layout */}
+          <div className="space-y-4 w-full overflow-x-auto pb-4 flex flex-col items-center">
+            {Object.keys(groupedSeats).map((rowLetter) => (
+              <div key={rowLetter} className="flex items-center gap-3 min-w-max">
+                <span className="w-6 text-right font-black text-gray-500 text-sm mr-2">{rowLetter}</span>
+                <div className="flex gap-2.5">
+                  {groupedSeats[rowLetter].map((seat) => {
+                    const isAvailable = seat.status === 'AVAILABLE';
+                    const isHeld = seat.status === 'HELD';
+                    const isBooked = seat.status === 'BOOKED';
+                    const isHolding = holdingSeatId === seat.id;
 
-              let btnClass = "";
-              if (isAvailable) btnClass = "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 cursor-pointer";
-              else if (isHeld) btnClass = "bg-amber-500/20 border border-amber-500/30 text-amber-400 cursor-not-allowed";
-              else if (isBooked) btnClass = "bg-rose-500/20 border border-rose-500/30 text-rose-400 cursor-not-allowed";
-              else btnClass = "bg-slate-800 border border-slate-700 text-gray-500 cursor-not-allowed";
+                    let btnClass = "";
+                    if (isAvailable) btnClass = "bg-emerald-500/5 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-400 hover:text-slate-950 hover:border-emerald-300 cursor-pointer hover:shadow-lg hover:shadow-emerald-500/15 hover:-translate-y-0.5";
+                    else if (isHeld) btnClass = "bg-amber-500/10 border border-amber-500/20 text-amber-400 cursor-not-allowed";
+                    else if (isBooked) btnClass = "bg-rose-500/10 border border-rose-500/20 text-rose-400 cursor-not-allowed";
+                    else btnClass = "bg-slate-900 border border-slate-800 text-gray-600 cursor-not-allowed";
 
-              if (isHolding) btnClass = "bg-teal-500/40 border border-teal-400 animate-pulse text-white cursor-wait";
+                    if (isHolding) btnClass = "bg-teal-500/30 border border-teal-400 animate-pulse text-white cursor-wait";
 
-              return (
-                <button
-                  key={seat.id}
-                  disabled={!isAvailable || isHolding}
-                  onClick={() => handleSelectSeat(seat)}
-                  className={`w-10 h-10 rounded-lg text-xs font-bold flex items-center justify-center transition-all ${btnClass}`}
-                  title={`Seat ${seat.seatNumber} - $${seat.price} (${seat.status})`}
-                >
-                  {seat.seatNumber}
-                </button>
-              );
-            })}
+                    return (
+                      <button
+                        key={seat.id}
+                        disabled={!isAvailable || isHolding}
+                        onClick={() => handleSelectSeat(seat)}
+                        className={`w-9.5 h-9.5 rounded-lg text-xxs font-extrabold flex items-center justify-center transition-all duration-200 ${btnClass}`}
+                        title={`Seat ${seat.seatNumber} - $${seat.price} (${seat.status})`}
+                      >
+                        {seat.seatNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="w-6 text-left font-black text-gray-500 text-sm ml-2">{rowLetter}</span>
+              </div>
+            ))}
           </div>
 
-          {/* Map Legend */}
-          <div className="flex justify-center flex-wrap gap-6 border-t border-white/5 pt-6 w-full max-w-md text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-emerald-500/10 border border-emerald-500/30" />
+          {/* Map Legend indicators */}
+          <div className="flex justify-center flex-wrap gap-8 border-t border-white/5 pt-8 w-full max-w-lg text-xs font-bold uppercase tracking-wider mt-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-4 h-4 rounded bg-emerald-500/10 border border-emerald-500/20 shadow-sm" />
               <span className="text-gray-400">Available</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-amber-500/20 border border-amber-500/30" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-4 h-4 rounded bg-amber-500/10 border border-amber-500/20 shadow-sm" />
               <span className="text-gray-400">Held</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-rose-500/20 border border-rose-500/30" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-4 h-4 rounded bg-rose-500/10 border border-rose-500/20 shadow-sm" />
               <span className="text-gray-400">Booked</span>
             </div>
           </div>
         </div>
 
-        {/* Details Sidebar */}
-        <div className="glass-panel p-8 rounded-2xl shadow-xl space-y-6">
-          <h2 className="text-xl font-bold text-white border-b border-white/5 pb-4">
-            Reservation Info
+        {/* Pricing Summary Side info */}
+        <div className="glass-panel p-8 rounded-3xl shadow-2xl border border-white/5 space-y-8">
+          <h2 className="text-xl font-bold text-white border-b border-white/5 pb-4 tracking-tight uppercase tracking-wider">
+            HOLD DETAILS
           </h2>
 
-          <div className="space-y-4">
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex gap-3 text-emerald-300">
-              <Info className="h-5 w-5 shrink-0" />
-              <p className="text-xs leading-relaxed">
-                Clicking an available seat will reserve it for you for <strong>5 minutes</strong> using Redis Distributed Locks. Complete your payment within this time limit to confirm your booking.
-              </p>
+          <div className="space-y-5">
+            <div className="bg-gradient-to-br from-indigo-500/10 to-indigo-900/5 border border-indigo-500/25 rounded-2xl p-5 flex gap-4 text-indigo-300">
+              <Info className="h-5.5 w-5.5 shrink-0 text-indigo-400" />
+              <div className="space-y-1">
+                <h4 className="text-xs font-extrabold uppercase tracking-wide">How Reservation Holds Work</h4>
+                <p className="text-xxs leading-relaxed text-gray-400">
+                  Selecting an available seat calls `booking-service` which locks the seat in Redis with a 5-minute expiry. If checkout isn't completed before the timer hits 0, the lock frees up automatically.
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-3 pt-4 border-t border-white/5">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Standard Ticket Price</span>
+            <div className="space-y-3 pt-6 border-t border-white/5">
+              <div className="flex justify-between text-xs font-semibold text-gray-400">
+                <span>Standard Ticket Rate</span>
                 <span className="text-white font-bold">$100.00</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Booking Fee</span>
-                <span className="text-white font-bold">$0.00</span>
+              <div className="flex justify-between text-xs font-semibold text-gray-400">
+                <span>Network Booking Fee</span>
+                <span className="text-emerald-400 font-bold">FREE</span>
               </div>
-              <div className="flex justify-between text-base pt-3 border-t border-white/5 font-extrabold">
-                <span className="text-white">Total</span>
-                <span className="text-emerald-400">$100.00</span>
+              <div className="flex justify-between text-xs font-semibold text-gray-400">
+                <span>Venue Security Surcharge</span>
+                <span className="text-emerald-400 font-bold">FREE</span>
+              </div>
+              <div className="flex justify-between text-base pt-4 border-t border-white/5 font-black">
+                <span className="text-white uppercase tracking-wider text-sm">Estimated Cost</span>
+                <span className="text-emerald-400 text-xl font-black">$100.00</span>
+              </div>
+            </div>
+
+            {/* Venue Capacity Specs widget */}
+            <div className="border-t border-white/5 pt-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Landmark className="h-5 w-5 text-emerald-400" />
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Venue Configuration</span>
+              </div>
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-4.5 space-y-2 text-xxs font-bold text-gray-400 uppercase tracking-wide">
+                <div className="flex justify-between">
+                  <span>Venue capacity</span>
+                  <span className="text-white font-black">{event.venue.capacity} Seats</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Available Seats</span>
+                  <span className="text-emerald-400 font-black">
+                    {seats.filter(s => s.status === 'AVAILABLE').length} Available
+                  </span>
+                </div>
               </div>
             </div>
           </div>
