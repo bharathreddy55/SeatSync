@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Search, Calendar, MapPin, Clock, Sparkles, ArrowRight, Music, Trophy, Film, Presentation } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  Search, Calendar, MapPin, Clock, Sparkles, ArrowRight, 
+  Music, Trophy, Film, Presentation, Eye, X 
+} from 'lucide-react';
 
 interface Event {
   id: number;
@@ -16,12 +20,39 @@ interface Event {
   status: string;
 }
 
+interface Seat {
+  id: number;
+  eventId: number;
+  seatNumber: string;
+  price: number;
+  status: 'AVAILABLE' | 'HELD' | 'BOOKED' | 'CANCELLED';
+}
+
+interface Booking {
+  id: number;
+  userId: number;
+  eventId: number;
+  seatId: number;
+  status: string;
+  bookingTime: string;
+}
+
 export const Events: React.FC = () => {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Monitor Modal states
+  const [showMonitorModal, setShowMonitorModal] = useState(false);
+  const [monitoredEvent, setMonitoredEvent] = useState<Event | null>(null);
+  const [monitoredSeats, setMonitoredSeats] = useState<Seat[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [monitoringLoading, setMonitoringLoading] = useState(false);
+
+  const isAdmin = user?.role === 'ORGANIZER';
 
   useEffect(() => {
     fetchEvents();
@@ -52,6 +83,29 @@ export const Events: React.FC = () => {
       console.error('Search failed:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenMonitor = async (e: React.MouseEvent, eventObj: Event) => {
+    e.stopPropagation(); // prevent navigating to event page
+    setMonitoredEvent(eventObj);
+    setShowMonitorModal(true);
+    setMonitoringLoading(true);
+    try {
+      // Fetch seats for this event
+      const seatsRes = await api.get(`/api/seats/event/${eventObj.id}`);
+      const sortedSeats = seatsRes.data.sort((a: Seat, b: Seat) => 
+        a.seatNumber.localeCompare(b.seatNumber, undefined, { numeric: true, sensitivity: 'base' })
+      );
+      setMonitoredSeats(sortedSeats);
+
+      // Fetch bookings for metrics calculations
+      const bookingsRes = await api.get('/api/bookings');
+      setBookings(bookingsRes.data);
+    } catch (err) {
+      console.error("Failed to load live monitor stats:", err);
+    } finally {
+      setMonitoringLoading(false);
     }
   };
 
@@ -181,7 +235,18 @@ export const Events: React.FC = () => {
                     {getEventCategoryIcon(event.title)}
                     <span className="ml-1.5">{event.status}</span>
                   </span>
-                  <Sparkles className="h-5 w-5 text-emerald-400 opacity-40 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300" />
+                  
+                  {isAdmin ? (
+                    <button
+                      onClick={(e) => handleOpenMonitor(e, event)}
+                      className="p-2 bg-slate-950/80 hover:bg-indigo-500 hover:text-slate-950 border border-white/10 rounded-full transition-all duration-200 shadow-md cursor-pointer hover:scale-110 z-10 text-indigo-400 hover:border-indigo-400"
+                      title="Monitor live occupancy & metrics"
+                    >
+                      <Eye className="h-4.5 w-4.5" />
+                    </button>
+                  ) : (
+                    <Sparkles className="h-5 w-5 text-emerald-400 opacity-40 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300" />
+                  )}
                 </div>
 
                 <h3 className="text-2xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300 leading-tight tracking-tight line-clamp-2">
@@ -218,6 +283,156 @@ export const Events: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Real-time Occupancy Modal Popup (Admin Only) */}
+      {showMonitorModal && monitoredEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-slate-950/80 overflow-y-auto">
+          <div className="relative w-full max-w-4xl glass-panel p-8 md:p-10 rounded-3xl shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto space-y-8 animate-scale-up">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => { setShowMonitorModal(false); setMonitoredEvent(null); }}
+              className="absolute top-6 right-6 p-2.5 bg-white/5 hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 rounded-full border border-white/5 hover:border-rose-500/20 transition-all cursor-pointer"
+            >
+              <X className="h-5.5 w-5.5" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="border-b border-white/5 pb-4 space-y-2">
+              <span className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xxs font-extrabold px-3.5 py-2 rounded-full uppercase tracking-wider shadow-sm inline-block">
+                Live Occupancy monitor
+              </span>
+              <h2 className="text-3xl font-black text-white leading-tight uppercase tracking-wide">
+                {monitoredEvent.title}
+              </h2>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+                Venue: {monitoredEvent.venue.name}, {monitoredEvent.venue.location}
+              </p>
+            </div>
+
+            {/* Layout Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Seating Grid Map Visualizer */}
+              <div className="lg:col-span-8 bg-slate-950/60 rounded-2xl border border-white/5 p-6 flex flex-col items-center">
+                <h3 className="text-xxs font-extrabold text-gray-500 uppercase tracking-widest mb-6 w-full border-b border-white/5 pb-2">
+                  Live Occupancy Seating Map
+                </h3>
+                
+                {monitoringLoading ? (
+                  <div className="py-20 animate-pulse text-indigo-400 text-xs font-bold uppercase tracking-wider">
+                    Syncing seating registry...
+                  </div>
+                ) : monitoredSeats.length === 0 ? (
+                  <div className="py-20 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                    No seat layout configured.
+                  </div>
+                ) : (
+                  <div className="space-y-3.5 overflow-x-auto w-full pb-4 flex flex-col items-center">
+                    {/* Row mapper */}
+                    {Object.keys(
+                      monitoredSeats.reduce((acc: any, seat) => {
+                        const row = seat.seatNumber.match(/[A-Z]+/)?.[0] || 'A';
+                        if (!acc[row]) acc[row] = [];
+                        acc[row].push(seat);
+                        return acc;
+                      }, {})
+                    ).map((rowLetter) => {
+                      const rowSeats = monitoredSeats.filter(s => s.seatNumber.startsWith(rowLetter));
+                      return (
+                        <div key={rowLetter} className="flex items-center gap-2.5 min-w-max">
+                          <span className="w-5 text-right font-black text-gray-500 text-xs mr-1">{rowLetter}</span>
+                          <div className="flex gap-1.5">
+                            {rowSeats.map((seat) => {
+                              const isAvailable = seat.status === 'AVAILABLE';
+                              const isHeld = seat.status === 'HELD';
+                              const isBooked = seat.status === 'BOOKED';
+
+                              let badgeClass = "";
+                              if (isAvailable) badgeClass = "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400";
+                              else if (isHeld) badgeClass = "bg-amber-500/15 border border-amber-500/20 text-amber-400 animate-pulse";
+                              else if (isBooked) badgeClass = "bg-rose-500/15 border border-rose-500/20 text-rose-400 font-extrabold";
+
+                              return (
+                                <div
+                                  key={seat.id}
+                                  className={`w-7.5 h-7.5 rounded-lg text-[9px] font-black flex items-center justify-center border ${badgeClass}`}
+                                  title={`Seat ${seat.seatNumber} - Status: ${seat.status}`}
+                                >
+                                  {seat.seatNumber}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Legend */}
+                    <div className="flex justify-center flex-wrap gap-5 border-t border-white/5 pt-5 w-full max-w-sm text-[10px] font-bold uppercase tracking-wider mt-4">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 rounded bg-emerald-500/10 border border-emerald-500/20" />
+                        <span className="text-gray-400 text-xxs">Available</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 rounded bg-amber-500/15 border border-amber-500/20" />
+                        <span className="text-gray-400 text-xxs">Held</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 rounded bg-rose-500/15 border border-rose-500/20" />
+                        <span className="text-gray-400 text-xxs">Booked</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sales Analytics Sidebar Widget */}
+              <div className="lg:col-span-4 bg-slate-950/60 rounded-2xl border border-white/5 p-6 space-y-4">
+                <h3 className="text-xxs font-extrabold text-gray-500 uppercase tracking-widest border-b border-white/5 pb-2.5">
+                  Live Sales Dashboard
+                </h3>
+                
+                {(() => {
+                  const eventBookings = bookings.filter(b => b.eventId === monitoredEvent.id);
+                  const confirmedCount = eventBookings.filter(b => b.status === 'CONFIRMED').length;
+                  const pendingCount = eventBookings.filter(b => b.status === 'PENDING').length;
+                  const cancelledCount = eventBookings.filter(b => b.status === 'CANCELLED').length;
+                  
+                  const totalRevenue = confirmedCount * (monitoredSeats[0]?.price || 120);
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-xs font-semibold text-gray-400">
+                        <span>Tickets Sold</span>
+                        <span className="text-white font-black">{confirmedCount} Seats</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-semibold text-gray-400">
+                        <span>Active Holds</span>
+                        <span className="text-amber-400 font-black">{pendingCount} HELD</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-semibold text-gray-400">
+                        <span>Cancellations</span>
+                        <span className="text-rose-400 font-black">{cancelledCount} Releases</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs font-semibold text-gray-400">
+                        <span>Available Seats</span>
+                        <span className="text-emerald-400 font-black">
+                          {monitoredSeats.filter(s => s.status === 'AVAILABLE').length} Seats
+                        </span>
+                      </div>
+                      <div className="border-t border-white/5 pt-4 flex justify-between items-center text-xs font-bold uppercase tracking-wider">
+                        <span className="text-white">Live Revenue</span>
+                        <span className="text-emerald-400 font-black text-sm">${totalRevenue.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
