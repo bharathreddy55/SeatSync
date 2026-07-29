@@ -18,19 +18,19 @@ public class SeatController {
     }
 
     @GetMapping("/event/{eventId}")
-    public ResponseEntity<List<Seat>> getSeatsByEventId(@PathVariable Long eventId) {
+    public ResponseEntity<List<Seat>> getSeatsByEventId(@PathVariable("eventId") Long eventId) {
         return ResponseEntity.ok(seatService.getSeatsByEventId(eventId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Seat> getSeatById(@PathVariable Long id) {
+    public ResponseEntity<Seat> getSeatById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(seatService.getSeatById(id));
     }
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Seat> updateSeatStatus(
-            @PathVariable Long id,
-            @RequestParam SeatStatus status
+            @PathVariable("id") Long id,
+            @RequestParam("status") SeatStatus status
     ) {
         return ResponseEntity.ok(seatService.updateSeatStatus(id, status));
     }

@@ -17,18 +17,18 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
-    @PostMapping
+    @PostMapping({"", "/book"})
     public ResponseEntity<BookingResponse> createBooking(@RequestBody BookingRequest request) {
         return ResponseEntity.ok(bookingService.createBooking(request));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<BookingResponse>> getBookingsByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<BookingResponse>> getBookingsByUserId(@PathVariable("userId") Long userId) {
         return ResponseEntity.ok(bookingService.getBookingsByUserId(userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookingResponse> getBookingById(@PathVariable Long id) {
+    public ResponseEntity<BookingResponse> getBookingById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(bookingService.getBookingById(id));
     }
 }

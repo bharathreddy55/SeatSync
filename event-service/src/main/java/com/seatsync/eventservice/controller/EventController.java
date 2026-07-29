@@ -28,17 +28,17 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Event> getEventById(@PathVariable Long id) {
+    public ResponseEntity<Event> getEventById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(eventService.getEventById(id));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Event>> searchEvents(@RequestParam String query) {
+    public ResponseEntity<List<Event>> searchEvents(@RequestParam("query") String query) {
         return ResponseEntity.ok(eventService.searchEvents(query));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteEvent(@PathVariable("id") Long id) {
         eventService.deleteEvent(id);
         return ResponseEntity.noContent().build();
     }

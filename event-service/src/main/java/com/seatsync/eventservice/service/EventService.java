@@ -77,7 +77,7 @@ public class EventService {
         return eventRepository.findAll();
     }
 
-    @Cacheable(value = "events", key = "#id")
+    @Cacheable(value = "events", key = "#p0")
     public Event getEventById(Long id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found with ID: " + id));
@@ -87,7 +87,7 @@ public class EventService {
         return eventRepository.findByTitleContainingIgnoreCase(query);
     }
 
-    @CacheEvict(value = "events", key = "#id")
+    @CacheEvict(value = "events", key = "#p0")
     @Transactional
     public void deleteEvent(Long id) {
         Event event = getEventById(id);

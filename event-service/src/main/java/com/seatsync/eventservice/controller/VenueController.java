@@ -28,7 +28,7 @@ public class VenueController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Venue> getVenueById(@PathVariable Long id) {
+    public ResponseEntity<Venue> getVenueById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(venueService.getVenueById(id));
     }
 }
