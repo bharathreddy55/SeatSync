@@ -16,10 +16,10 @@ export const Checkout: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
 
-  const [booking, setBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [eventTitle, setEventTitle] = useState('');
-  const [seatNumber, setSeatNumber] = useState('');
-  const [price, setPrice] = useState(100.0);
+  const [seatNumbers, setSeatNumbers] = useState<string[]>([]);
+  const [price, setPrice] = useState(0.0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [paying, setPaying] = useState(false);
@@ -36,9 +36,10 @@ export const Checkout: React.FC = () => {
   }, [bookingId]);
 
   useEffect(() => {
-    if (!booking) return;
+    if (bookings.length === 0) return;
 
-    const bookingTimeMs = new Date(booking.bookingTime).getTime();
+    // Use bookingTime of the first booking as base reference
+    const bookingTimeMs = new Date(bookings[0].bookingTime).getTime();
     const expiryTimeMs = bookingTimeMs + 5 * 60 * 1000;
     
     const updateTimer = () => {
@@ -46,28 +47,40 @@ export const Checkout: React.FC = () => {
       const diffSeconds = Math.max(0, Math.floor((expiryTimeMs - now) / 1000));
       setTimeLeft(diffSeconds);
       if (diffSeconds <= 0) {
-        setError('Your 5-minute seat hold has expired. Please return to the event details page and select your seat again.');
+        setError('Your 5-minute seat hold has expired. Please return to the event details page and select your seats again.');
       }
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [booking]);
+  }, [bookings]);
 
   const fetchBookingDetails = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get(`/api/bookings/${bookingId}`);
-      setBooking(res.data);
+      const bookingIdsList = bookingId ? bookingId.split(',') : [];
+      const bookingsRes = await Promise.all(
+        bookingIdsList.map(id => api.get(`/api/bookings/${id}`))
+      );
+      const retrievedBookings = bookingsRes.map(res => res.data);
+      setBookings(retrievedBookings);
 
-      const seatRes = await api.get(`/api/seats/${res.data.seatId}`);
-      setSeatNumber(seatRes.data.seatNumber);
-      setPrice(seatRes.data.price);
+      // Fetch seat details for all bookings
+      const seatsRes = await Promise.all(
+        retrievedBookings.map(b => api.get(`/api/seats/${b.seatId}`))
+      );
+      setSeatNumbers(seatsRes.map(res => res.data.seatNumber));
+      
+      const totalAmount = seatsRes.reduce((sum, res) => sum + res.data.price, 0);
+      setPrice(totalAmount);
 
-      const eventRes = await api.get(`/api/events/${res.data.eventId}`);
-      setEventTitle(eventRes.data.title);
+      // Fetch event details (same for all bookings)
+      if (retrievedBookings.length > 0) {
+        const eventRes = await api.get(`/api/events/${retrievedBookings[0].eventId}`);
+        setEventTitle(eventRes.data.title);
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to load reservation details.');
@@ -86,28 +99,33 @@ export const Checkout: React.FC = () => {
     setError('');
 
     try {
+      const bookingIdsList = bookingId ? bookingId.split(',') : [];
+      const individualAmount = price / bookingIdsList.length;
+
       if (simulateDuplicate) {
         console.log("[Idempotency Test] Simulating concurrent duplicate payment requests...");
-        const request1 = api.post(
-          '/api/payments',
-          { bookingId: booking?.id, amount: price },
-          { headers: { 'Idempotency-Key': idempotencyKey } }
-        );
-        const request2 = api.post(
-          '/api/payments',
-          { bookingId: booking?.id, amount: price },
-          { headers: { 'Idempotency-Key': idempotencyKey } }
-        );
-
-        const [res1, res2] = await Promise.all([request1, request2]);
-        console.log('Request 1 response:', res1.data);
-        console.log('Request 2 response (Idempotent):', res2.data);
+        const paymentRequests = bookingIdsList.flatMap(id => [
+          api.post(
+            '/api/payments',
+            { bookingId: parseInt(id), amount: individualAmount },
+            { headers: { 'Idempotency-Key': `${idempotencyKey}-${id}` } }
+          ),
+          api.post(
+            '/api/payments',
+            { bookingId: parseInt(id), amount: individualAmount },
+            { headers: { 'Idempotency-Key': `${idempotencyKey}-${id}` } }
+          )
+        ]);
+        await Promise.all(paymentRequests);
       } else {
-        await api.post(
-          '/api/payments',
-          { bookingId: booking?.id, amount: price },
-          { headers: { 'Idempotency-Key': idempotencyKey } }
+        const paymentRequests = bookingIdsList.map(id =>
+          api.post(
+            '/api/payments',
+            { bookingId: parseInt(id), amount: individualAmount },
+            { headers: { 'Idempotency-Key': `${idempotencyKey}-${id}` } }
+          )
         );
+        await Promise.all(paymentRequests);
       }
 
       navigate('/bookings', { state: { bookingSuccess: true } });
@@ -213,7 +231,7 @@ export const Checkout: React.FC = () => {
               <div className="space-y-2">
                 <h4 className="text-xs font-extrabold uppercase tracking-wide text-blue-300">Double Charge Protection Enabled</h4>
                 <p className="text-xxs text-gray-400 leading-relaxed">
-                  We secure this transaction using the API idempotency key listed in the order summary. Toggle the simulator below to test parallel duplicate booking processing.
+                  We secure these transactions using unique idempotency keys per seat. Toggle the simulator below to test parallel duplicate booking processing.
                 </p>
                 <label className="flex items-center gap-2.5 text-xs font-bold text-white mt-4 cursor-pointer">
                   <input
@@ -231,9 +249,9 @@ export const Checkout: React.FC = () => {
               type="button"
               onClick={handlePayment}
               disabled={paying || timeLeft <= 0}
-              className="glow-btn w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black py-4 rounded-xl shadow-lg transition-all text-sm uppercase tracking-widest cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-400/20"
+              className="glow-btn w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black py-4 rounded-xl text-xs uppercase tracking-widest cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-400/20"
             >
-              {paying ? 'Authorizing Payment Gateway...' : 'Pay and Confirm Reservation'}
+              {paying ? 'Authorizing Payment Gateway...' : `Pay and Confirm ${bookings.length} ${bookings.length === 1 ? 'Booking' : 'Bookings'}`}
             </button>
           </form>
         </div>
@@ -258,7 +276,7 @@ export const Checkout: React.FC = () => {
                 />
               </div>
               <p className="text-xxs text-gray-500 leading-normal">
-                This seat is reserved for you. If payment details are not authorized before the lock bar depletes, the hold will automatically release back to event availability.
+                These seats are reserved for you. If payment details are not authorized before the lock bar depletes, holds will release back to event availability.
               </p>
             </div>
           )}
@@ -274,15 +292,19 @@ export const Checkout: React.FC = () => {
                 <span className="text-white font-black truncate max-w-[200px]">{eventTitle}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Reserved seat</span>
-                <span className="text-emerald-400 font-black">Seat {seatNumber}</span>
+                <span className="text-gray-500">Reserved seats</span>
+                <span className="text-emerald-400 font-black truncate max-w-[220px]">
+                  {seatNumbers.map(n => `Seat ${n}`).join(', ')}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Transaction ID</span>
-                <span className="text-white font-mono font-bold">#SNC-00{booking?.id}</span>
+                <span className="text-gray-500">Transaction IDs</span>
+                <span className="text-white font-mono font-bold truncate max-w-[220px]">
+                  {bookings.map(b => `#SNC-00${b.id}`).join(', ')}
+                </span>
               </div>
               <div className="flex justify-between items-start">
-                <span className="text-gray-500">Idempotency Key</span>
+                <span className="text-gray-500">Idempotency Base</span>
                 <span className="text-gray-500 font-mono text-xxs text-right truncate max-w-[180px]">
                   {idempotencyKey}
                 </span>
