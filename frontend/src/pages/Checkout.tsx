@@ -143,6 +143,27 @@ export const Checkout: React.FC = () => {
     }
   };
 
+  const handleCancelReservation = async () => {
+    setPaying(true);
+    setError('');
+    try {
+      const bookingIdsList = bookingId ? bookingId.split(',') : [];
+      await Promise.all(
+        bookingIdsList.map(id => api.put(`/api/bookings/${id}/cancel`))
+      );
+      if (bookings.length > 0) {
+        navigate(`/event/${bookings[0].eventId}`);
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      console.error("Failed to cancel reservations:", err);
+      setError("Failed to cancel reservation holds. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -263,6 +284,15 @@ export const Checkout: React.FC = () => {
               className="glow-btn w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black py-4 rounded-xl text-xs uppercase tracking-widest cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border border-emerald-400/20"
             >
               {paying ? 'Authorizing Payment Gateway...' : `Pay and Confirm ${bookings.length} ${bookings.length === 1 ? 'Booking' : 'Bookings'}`}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCancelReservation}
+              disabled={paying}
+              className="w-full bg-transparent hover:bg-white/5 text-rose-400 border border-rose-500/30 hover:border-rose-500/50 font-bold py-3.5 rounded-xl text-xs uppercase tracking-widest cursor-pointer mt-2 transition-all duration-200"
+            >
+              Cancel Reservation & Go Back
             </button>
           </form>
         </div>

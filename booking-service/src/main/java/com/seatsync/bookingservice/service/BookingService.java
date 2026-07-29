@@ -76,6 +76,31 @@ public class BookingService {
         return mapToResponse(booking);
     }
 
+    @Transactional
+    public BookingResponse cancelBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalStateException("Only pending bookings can be cancelled.");
+        }
+        
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        
+        // Release lock and mark seat available in event-service
+        String seatUrl = "http://api-gateway:8080/api/seats/" + booking.getSeatId();
+        try {
+            restTemplate.put(seatUrl + "/status?status=AVAILABLE", null);
+        } catch (Exception e) {
+            // log and continue
+        }
+        
+        seatLockService.releaseLock(booking.getSeatId(), booking.getUserId());
+        
+        return mapToResponse(booking);
+    }
+
     private BookingResponse mapToResponse(Booking booking) {
         return BookingResponse.builder()
                 .id(booking.getId())
