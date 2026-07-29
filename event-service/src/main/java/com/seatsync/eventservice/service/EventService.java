@@ -30,6 +30,7 @@ public class EventService {
     }
 
     @Transactional
+    @CacheEvict(value = "events", allEntries = true)
     public Event createEvent(EventRequest request) {
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(() -> new IllegalArgumentException("Venue not found"));

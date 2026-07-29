@@ -6,7 +6,8 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "events")
-public class Event {
+public class Event implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
