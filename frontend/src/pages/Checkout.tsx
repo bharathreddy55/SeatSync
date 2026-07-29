@@ -25,6 +25,8 @@ export const Checkout: React.FC = () => {
   const [paying, setPaying] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState('');
   const [simulateDuplicate, setSimulateDuplicate] = useState(false);
+  const [cardNumber, setCardNumber] = useState('4111 2222 3333 9924');
+  const [cvv, setCvv] = useState('123');
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes
@@ -192,15 +194,17 @@ export const Checkout: React.FC = () => {
               <div className="w-9 h-6 bg-white/10 rounded-md backdrop-blur-sm" />
             </div>
             <div className="space-y-4">
-              <div className="text-lg font-mono tracking-widest text-white font-semibold">•••• •••• •••• 9924</div>
+              <div className="text-lg font-mono tracking-widest text-white font-semibold">
+                {cardNumber || '•••• •••• •••• ••••'}
+              </div>
               <div className="flex justify-between text-xxs font-bold uppercase text-gray-400 tracking-wider">
                 <div>
                   <span className="block text-gray-500">Holder</span>
                   <span className="text-white mt-0.5 block">{window.localStorage.getItem('user_name') || 'SeatSync Customer'}</span>
                 </div>
                 <div>
-                  <span className="block text-gray-500">Expires</span>
-                  <span className="text-white mt-0.5 block">12/30</span>
+                  <span className="block text-gray-500">CVV</span>
+                  <span className="text-white mt-0.5 block">{cvv || '•••'}</span>
                 </div>
               </div>
             </div>
@@ -213,18 +217,21 @@ export const Checkout: React.FC = () => {
                 <label className="block text-gray-400 text-xxs font-bold uppercase tracking-wider mb-2">Card Number</label>
                 <input
                   type="text"
-                  disabled
-                  value="4111 2222 3333 9924"
-                  className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-gray-400 font-mono text-sm focus:outline-none"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-emerald-400"
+                  placeholder="Enter card number"
                 />
               </div>
               <div>
                 <label className="block text-gray-400 text-xxs font-bold uppercase tracking-wider mb-2">Security Code</label>
                 <input
-                  type="password"
-                  disabled
-                  value="123"
-                  className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-gray-400 font-mono text-sm focus:outline-none"
+                  type="text"
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value)}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-emerald-400"
+                  placeholder="CVV"
+                  maxLength={4}
                 />
               </div>
             </div>
