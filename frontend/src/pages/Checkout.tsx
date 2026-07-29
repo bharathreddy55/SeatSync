@@ -38,8 +38,12 @@ export const Checkout: React.FC = () => {
   useEffect(() => {
     if (bookings.length === 0) return;
 
-    // Use bookingTime of the first booking as base reference
-    const bookingTimeMs = new Date(bookings[0].bookingTime).getTime();
+    // Use bookingTime of the first booking as base reference (ensuring UTC parsing)
+    let bookingTimeString = bookings[0].bookingTime;
+    if (bookingTimeString && !bookingTimeString.endsWith('Z') && !bookingTimeString.includes('+')) {
+      bookingTimeString = bookingTimeString + 'Z';
+    }
+    const bookingTimeMs = new Date(bookingTimeString).getTime();
     const expiryTimeMs = bookingTimeMs + 5 * 60 * 1000;
     
     const updateTimer = () => {
