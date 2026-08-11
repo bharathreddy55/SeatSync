@@ -16,6 +16,7 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 6** | Security Hardening & Rate Limiting | **Completed** | August 2026 |
 | **Sprint 7** | Testing, CI/CD Pipelines & Kubernetes Deployment | **Completed** | August 2026 |
 | **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Completed** | August 2026 |
+| **Sprint 9** | Event-Driven Authentication Recovery & Password Reset | **Completed** | August 2026 |
 
 ---
 
@@ -94,3 +95,15 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Extract inter-service HTTP REST calls out of active `@Transactional` database methods.
 - [x] Add Resilience4j circuit breakers and timeout controls to client templates.
 - [x] Configure manual offsets (Ack) for Kafka consumers in `notification-service` to prevent message loss.
+
+### 🟩 Sprint 9: Event-Driven Authentication Recovery & Password Reset (Completed)
+*Focus: Add secure, asynchronous, event-driven forgot password and password reset features.*
+
+- [x] Configure Kafka producer properties and dependency in `user-service/pom.xml` and `application.yml`.
+- [x] Implement password reset token handling in `UserService.java` with a 15-minute Redis-backed TTL.
+- [x] Create DTOs (`ForgotPasswordRequest`, `ResetPasswordRequest`, `PasswordResetEvent`) for API payload parsing.
+- [x] Map public-facing `/forgot-password` and `/reset-password` endpoints in `AuthController.java` and expose them in `SecurityConfig.java`.
+- [x] Build `PasswordResetEvent` consumer listener in `NotificationConsumer.java` with manual offset acknowledgement.
+- [x] Implement SimpleMailMessage SMTP reset email generation template inside `NotificationService.java`.
+- [x] Create `ForgotPassword.tsx` and `ResetPassword.tsx` components in the React frontend with full dark-theme Outfit aesthetics.
+- [x] Integrate navigation routes in `App.tsx` and link to `/forgot-password` from the Login form.
