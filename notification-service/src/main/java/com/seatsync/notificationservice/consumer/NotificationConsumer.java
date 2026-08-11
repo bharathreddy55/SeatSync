@@ -1,6 +1,7 @@
 package com.seatsync.notificationservice.consumer;
 
 import com.seatsync.notificationservice.dto.BookingNotificationEvent;
+import com.seatsync.notificationservice.dto.PasswordResetEvent;
 import com.seatsync.notificationservice.service.NotificationService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -19,6 +20,16 @@ public class NotificationConsumer {
     public void consumeBookingNotification(BookingNotificationEvent event, Acknowledgment acknowledgment) {
         try {
             notificationService.sendNotification(event);
+            acknowledgment.acknowledge();
+        } catch (Exception e) {
+            // Do not acknowledge to allow Kafka to retry
+        }
+    }
+
+    @KafkaListener(topics = "password-resets", groupId = "notification-group")
+    public void consumePasswordReset(PasswordResetEvent event, Acknowledgment acknowledgment) {
+        try {
+            notificationService.sendPasswordResetEmail(event);
             acknowledgment.acknowledge();
         } catch (Exception e) {
             // Do not acknowledge to allow Kafka to retry

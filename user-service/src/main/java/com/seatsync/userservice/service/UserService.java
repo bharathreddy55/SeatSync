@@ -4,6 +4,7 @@ import com.seatsync.userservice.dto.AuthResponse;
 import com.seatsync.userservice.dto.LoginRequest;
 import com.seatsync.userservice.dto.RegisterRequest;
 import com.seatsync.userservice.dto.UserResponse;
+import com.seatsync.userservice.dto.PasswordResetEvent;
 import com.seatsync.userservice.model.Role;
 import com.seatsync.userservice.model.User;
 import com.seatsync.userservice.repository.UserRepository;
@@ -13,9 +14,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -25,15 +30,20 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
     private final TokenBlacklistService tokenBlacklistService;
+    private final StringRedisTemplate redisTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager,
-                       TokenBlacklistService tokenBlacklistService) {
+                       TokenBlacklistService tokenBlacklistService, StringRedisTemplate redisTemplate,
+                       KafkaTemplate<String, Object> kafkaTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationManager = authenticationManager;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.redisTemplate = redisTemplate;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -138,5 +148,35 @@ public class UserService {
     public void logout(String token) {
         long lifespan = jwtTokenProvider.getRemainingLifespan(token);
         tokenBlacklistService.blacklistToken(token, lifespan);
+    }
+
+    public void initiatePasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        String token = UUID.randomUUID().toString();
+        
+        // Store in Redis with a 15-minute TTL
+        redisTemplate.opsForValue().set("password:reset:" + token, email, Duration.ofMinutes(15));
+
+        // Publish event to Kafka
+        PasswordResetEvent event = new PasswordResetEvent(user.getEmail(), user.getName(), token);
+        kafkaTemplate.send("password-resets", event);
+    }
+
+    public void completePasswordReset(String token, String newPassword) {
+        String email = redisTemplate.opsForValue().get("password:reset:" + token);
+        if (email == null) {
+            throw new IllegalArgumentException("Invalid or expired password reset token.");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Clean up token
+        redisTemplate.delete("password:reset:" + token);
     }
 }

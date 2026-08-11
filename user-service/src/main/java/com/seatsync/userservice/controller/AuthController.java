@@ -4,6 +4,8 @@ import com.seatsync.userservice.dto.AuthResponse;
 import com.seatsync.userservice.dto.LoginRequest;
 import com.seatsync.userservice.dto.RegisterRequest;
 import com.seatsync.userservice.dto.UserResponse;
+import com.seatsync.userservice.dto.ForgotPasswordRequest;
+import com.seatsync.userservice.dto.ResetPasswordRequest;
 import com.seatsync.userservice.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -53,6 +55,18 @@ public class AuthController {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             userService.logout(authHeader.substring(7));
         }
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        userService.initiatePasswordReset(request.getEmail());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+        userService.completePasswordReset(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok().build();
     }
 }

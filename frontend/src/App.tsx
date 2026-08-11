@@ -5,6 +5,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Events } from './pages/Events';
 import { EventDetails } from './pages/EventDetails';
 import { Checkout } from './pages/Checkout';
@@ -26,6 +28,8 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               <Route path="/" element={
                 <ProtectedRoute>

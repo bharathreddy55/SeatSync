@@ -1,6 +1,7 @@
 package com.seatsync.notificationservice.service;
 
 import com.seatsync.notificationservice.dto.BookingNotificationEvent;
+import com.seatsync.notificationservice.dto.PasswordResetEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
@@ -75,5 +76,41 @@ public class NotificationService {
         log.info("Message: SeatSync: Booking #{} confirmed! Seat {} for '{}'. Enjoy your event!", 
                 event.getBookingId(), event.getSeatNumber(), event.getEventTitle());
         log.info("-----------------------------------------");
+    }
+
+    public void sendPasswordResetEmail(PasswordResetEvent event) {
+        log.info("=========================================");
+        log.info("PREPARING PASSWORD RESET EMAIL");
+        log.info("To: {}", event.getEmail());
+        log.info("Token: {}", event.getToken());
+        
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("no-reply@seatsync.com");
+            message.setTo(event.getEmail());
+            message.setSubject("SeatSync Password Reset Request");
+            
+            String resetUrl = "https://seat-sync-ecru.vercel.app/reset-password?token=" + event.getToken();
+            
+            String body = String.format(
+                "Dear %s,\n\n" +
+                "We received a request to reset your password for your SeatSync account.\n" +
+                "Please click the link below to set a new password. This link is valid for 15 minutes:\n\n" +
+                "%s\n\n" +
+                "If you did not request this, you can safely ignore this email.\n\n" +
+                "Best Regards,\n" +
+                "The SeatSync Team",
+                event.getUserName(),
+                resetUrl
+            );
+            
+            message.setText(body);
+            mailSender.send(message);
+            
+            log.info("PASSWORD RESET EMAIL SENT SUCCESSFULLY");
+        } catch (Exception e) {
+            log.error("FAILED to send password reset email to {}: {}", event.getEmail(), e.getMessage());
+        }
+        log.info("=========================================");
     }
 }
