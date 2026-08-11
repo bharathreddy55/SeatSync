@@ -55,12 +55,19 @@ public class PaymentService {
         // 3. Process payment (mock bank processing)
         String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
+        String rawCard = request.getCardNumber();
+        String maskedCard = "xxxx-xxxx-xxxx-0000";
+        if (rawCard != null && rawCard.length() >= 4) {
+            maskedCard = "xxxx-xxxx-xxxx-" + rawCard.substring(rawCard.length() - 4);
+        }
+        
         Payment payment = Payment.builder()
                 .bookingId(booking.getId())
                 .amount(request.getAmount())
                 .status(PaymentStatus.SUCCESS)
                 .transactionId(transactionId)
                 .idempotencyKey(idempotencyKey)
+                .partialCardNumber(maskedCard)
                 .build();
 
         payment = paymentRepository.save(payment);
@@ -71,16 +78,16 @@ public class PaymentService {
         bookingRepository.save(booking);
 
         // 5. Update seat status in event-service to BOOKED
-        String seatUrl = "http://api-gateway:8080/api/seats/" + booking.getSeatId();
+        String seatUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
         restTemplate.put(seatUrl + "/status?status=BOOKED", null);
 
         // 6. Release Redis hold lock explicitly
         seatLockService.releaseLock(booking.getSeatId(), booking.getUserId());
 
         // 7. Fetch user and event details to compile booking event details
-        String userUrl = "http://api-gateway:8080/api/auth/profile"; // fetch organiser profiles or profiles
-        String eventUrl = "http://api-gateway:8080/api/events/" + booking.getEventId();
-        String seatDetailsUrl = "http://api-gateway:8080/api/seats/" + booking.getSeatId();
+        String userUrl = "https://api-gateway:8080/api/auth/profile"; // fetch organiser profiles or profiles
+        String eventUrl = "https://api-gateway:8080/api/events/" + booking.getEventId();
+        String seatDetailsUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
 
         String userEmail = "customer@seatsync.com";
         String userName = "Valued Customer";
@@ -127,6 +134,7 @@ public class PaymentService {
                 .status(payment.getStatus().name())
                 .transactionId(payment.getTransactionId())
                 .idempotencyKey(payment.getIdempotencyKey())
+                .partialCardNumber(payment.getPartialCardNumber())
                 .paymentTime(payment.getPaymentTime())
                 .build();
     }

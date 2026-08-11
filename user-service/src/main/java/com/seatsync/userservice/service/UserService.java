@@ -50,6 +50,7 @@ public class UserService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .phoneNumber(request.getPhoneNumber())
                 .role(role)
                 .build();
 
@@ -101,6 +102,7 @@ public class UserService {
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();

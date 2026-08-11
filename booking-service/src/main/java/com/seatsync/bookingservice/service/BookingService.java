@@ -36,7 +36,7 @@ public class BookingService {
 
         try {
             // 2. Call event-service via gateway to verify seat status and set to HELD
-            String seatUrl = "http://api-gateway:8080/api/seats/" + request.getSeatId();
+            String seatUrl = "https://api-gateway:8080/api/seats/" + request.getSeatId();
             Map<?, ?> seat = restTemplate.getForObject(seatUrl, Map.class);
             if (seat == null || !"AVAILABLE".equals(seat.get("status"))) {
                 seatLockService.releaseLock(request.getSeatId(), request.getUserId());
@@ -95,7 +95,7 @@ public class BookingService {
         bookingRepository.save(booking);
         
         // Release lock and mark seat available in event-service
-        String seatUrl = "http://api-gateway:8080/api/seats/" + booking.getSeatId();
+        String seatUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
         try {
             restTemplate.put(seatUrl + "/status?status=AVAILABLE", null);
         } catch (Exception e) {

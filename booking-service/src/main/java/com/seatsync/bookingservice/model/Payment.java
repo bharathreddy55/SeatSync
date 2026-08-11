@@ -24,6 +24,10 @@ public class Payment {
     @Column(name = "transaction_id")
     private String transactionId;
 
+    @Convert(converter = EncryptionConverter.class)
+    @Column(name = "partial_card_number")
+    private String partialCardNumber;
+
     @Column(name = "idempotency_key", nullable = false, unique = true)
     private String idempotencyKey;
 
@@ -37,13 +41,14 @@ public class Payment {
 
     public Payment() {}
 
-    public Payment(Long id, Long bookingId, Double amount, PaymentStatus status, String transactionId, String idempotencyKey, LocalDateTime paymentTime) {
+    public Payment(Long id, Long bookingId, Double amount, PaymentStatus status, String transactionId, String idempotencyKey, String partialCardNumber, LocalDateTime paymentTime) {
         this.id = id;
         this.bookingId = bookingId;
         this.amount = amount;
         this.status = status;
         this.transactionId = transactionId;
         this.idempotencyKey = idempotencyKey;
+        this.partialCardNumber = partialCardNumber;
         this.paymentTime = paymentTime;
     }
 
@@ -57,6 +62,8 @@ public class Payment {
     public void setStatus(PaymentStatus status) { this.status = status; }
     public String getTransactionId() { return transactionId; }
     public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public String getPartialCardNumber() { return partialCardNumber; }
+    public void setPartialCardNumber(String partialCardNumber) { this.partialCardNumber = partialCardNumber; }
     public String getIdempotencyKey() { return idempotencyKey; }
     public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
     public LocalDateTime getPaymentTime() { return paymentTime; }
@@ -73,6 +80,7 @@ public class Payment {
         private PaymentStatus status;
         private String transactionId;
         private String idempotencyKey;
+        private String partialCardNumber;
         private LocalDateTime paymentTime;
 
         public PaymentBuilder id(Long id) { this.id = id; return this; }
@@ -81,10 +89,11 @@ public class Payment {
         public PaymentBuilder status(PaymentStatus status) { this.status = status; return this; }
         public PaymentBuilder transactionId(String transactionId) { this.transactionId = transactionId; return this; }
         public PaymentBuilder idempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; return this; }
+        public PaymentBuilder partialCardNumber(String partialCardNumber) { this.partialCardNumber = partialCardNumber; return this; }
         public PaymentBuilder paymentTime(LocalDateTime paymentTime) { this.paymentTime = paymentTime; return this; }
 
         public Payment build() {
-            return new Payment(id, bookingId, amount, status, transactionId, idempotencyKey, paymentTime);
+            return new Payment(id, bookingId, amount, status, transactionId, idempotencyKey, partialCardNumber, paymentTime);
         }
     }
 }

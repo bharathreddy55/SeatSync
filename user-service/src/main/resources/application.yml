@@ -1,5 +1,11 @@
 server:
   port: 8081
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: seatsync
 
 spring:
   application:
@@ -17,9 +23,13 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 eureka:
+  instance:
+    nonSecurePortEnabled: false
+    securePortEnabled: true
+    securePort: ${server.port}
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: https://localhost:8761/eureka/
 
 jwt:
   secret: 9a67678127436d396c26262a472c5a2c4e2c3954625b6a707172737475767778

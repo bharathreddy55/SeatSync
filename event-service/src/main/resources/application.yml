@@ -1,5 +1,11 @@
 server:
   port: 8082
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: seatsync
 
 spring:
   application:
@@ -23,9 +29,13 @@ spring:
     type: redis
 
 eureka:
+  instance:
+    nonSecurePortEnabled: false
+    securePortEnabled: true
+    securePort: ${server.port}
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: https://localhost:8761/eureka/
 
 management:
   endpoints:

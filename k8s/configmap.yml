@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seatsync-config
+data:
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "https://discovery-server:8761/eureka/"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  DB_HOST: "postgres-db"
+  DB_PORT: "5432"
+  MAIL_HOST: "maildev"
+  MAIL_PORT: "1025"
+  SERVICES_EVENT-SERVICE_URL: "https://event-service"

@@ -25,6 +25,16 @@ services:
     networks:
       - seatsync-network
 
+  # Mail server
+  maildev:
+    image: maildev/maildev
+    container_name: seatsync-maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - seatsync-network
+
   # Messaging
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
@@ -56,7 +66,9 @@ services:
 
   # Spring Cloud Eureka Discovery Server
   discovery-server:
-    build: ./discovery-server
+    build:
+      context: .
+      dockerfile: discovery-server/Dockerfile
     container_name: seatsync-discovery
     ports:
       - "8761:8761"
@@ -65,20 +77,27 @@ services:
 
   # Spring Cloud API Gateway
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     container_name: seatsync-gateway
     ports:
       - "8085:8080"
     depends_on:
       - discovery-server
+      - redis
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - seatsync-network
 
   # User Service
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
     container_name: seatsync-user-service
     ports:
       - "8081:8081"
@@ -97,7 +116,9 @@ services:
 
   # Event Service
   event-service:
-    build: ./event-service
+    build:
+      context: .
+      dockerfile: event-service/Dockerfile
     container_name: seatsync-event-service
     ports:
       - "8082:8082"
@@ -119,7 +140,9 @@ services:
 
   # Booking Service
   booking-service:
-    build: ./booking-service
+    build:
+      context: .
+      dockerfile: booking-service/Dockerfile
     container_name: seatsync-booking-service
     ports:
       - "8083:8083"
@@ -144,16 +167,21 @@ services:
 
   # Notification Service
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: seatsync-notification-service
     ports:
       - "8084:8084"
     depends_on:
       - kafka
       - discovery-server
+      - maildev
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      MAIL_HOST: maildev
+      MAIL_PORT: 1025
     networks:
       - seatsync-network
 
