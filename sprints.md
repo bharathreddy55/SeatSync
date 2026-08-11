@@ -15,7 +15,7 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 5** | Event-Driven Notifications & Kafka Integration | **Completed** | August 2026 |
 | **Sprint 6** | Security Hardening & Rate Limiting | **Completed** | August 2026 |
 | **Sprint 7** | Testing, CI/CD Pipelines & Kubernetes Deployment | **Completed** | August 2026 |
-| **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Pending** | September 2026 |
+| **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Completed** | August 2026 |
 
 ---
 
@@ -85,12 +85,12 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Create Kubernetes manifests (`deployment.yml`, `service.yml`, `configmap.yml`, `secrets.yml`) for local Minikube testing.
 - [x] Add Prometheus Actuator endpoints and Grafana dashboards for monitoring system health.
 
-### 🟥 Sprint 8: Production Readiness, Security Refactoring & Resiliency (Pending)
+### 🟩 Sprint 8: Production Readiness, Security Refactoring & Resiliency (Completed)
 *Focus: Address critical security vulnerabilities, concurrency bugs, and database connection starvation risk.*
 
-- [ ] Transition database encryption converter from hardcoded AES/ECB to dynamic AES/GCM/NoPadding with random IVs.
-- [ ] Implement Redis-backed Token Blacklisting for immediate logout/revocation support.
-- [ ] Refactor `SeatLockService` lock release operation to use atomic Redis Lua scripting.
-- [ ] Extract inter-service HTTP REST calls out of active `@Transactional` database methods.
-- [ ] Add Resilience4j circuit breakers and timeout controls to client templates.
-- [ ] Configure manual offsets (Ack) for Kafka consumers in `notification-service` to prevent message loss.
+- [x] Transition database encryption converter from hardcoded AES/ECB to dynamic AES/GCM/NoPadding with random IVs.
+- [x] Implement Redis-backed Token Blacklisting for immediate logout/revocation support.
+- [x] Refactor `SeatLockService` lock release operation to use atomic Redis Lua scripting.
+- [x] Extract inter-service HTTP REST calls out of active `@Transactional` database methods.
+- [x] Add Resilience4j circuit breakers and timeout controls to client templates.
+- [x] Configure manual offsets (Ack) for Kafka consumers in `notification-service` to prevent message loss.

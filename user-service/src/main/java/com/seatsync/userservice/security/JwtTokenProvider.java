@@ -75,8 +75,17 @@ public class JwtTokenProvider {
         return extractExpiration(token).before(new Date());
     }
 
-    private Date extractExpiration(String token) {
+    public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
+    }
+
+    public long getRemainingLifespan(String token) {
+        try {
+            Date expiration = extractExpiration(token);
+            return expiration.getTime() - System.currentTimeMillis();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private Claims extractAllClaims(String token) {

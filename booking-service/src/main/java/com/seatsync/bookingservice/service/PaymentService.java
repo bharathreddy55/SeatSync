@@ -25,26 +25,27 @@ public class PaymentService {
     private final SeatLockService seatLockService;
     private final BookingEventProducer bookingEventProducer;
     private final RestTemplate restTemplate;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     public PaymentService(PaymentRepository paymentRepository, BookingRepository bookingRepository,
                           SeatLockService seatLockService, BookingEventProducer bookingEventProducer,
-                          RestTemplate restTemplate) {
+                          RestTemplate restTemplate, org.springframework.transaction.PlatformTransactionManager transactionManager) {
         this.paymentRepository = paymentRepository;
         this.bookingRepository = bookingRepository;
         this.seatLockService = seatLockService;
         this.bookingEventProducer = bookingEventProducer;
         this.restTemplate = restTemplate;
+        this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
     }
 
-    @Transactional
     public PaymentResponse processPayment(PaymentRequest request, String idempotencyKey) {
-        // 1. Idempotency Check: search db for existing idempotency key
+        // 1. Idempotency Check: search db for existing idempotency key (outside transaction)
         Optional<Payment> existingPayment = paymentRepository.findByIdempotencyKey(idempotencyKey);
         if (existingPayment.isPresent()) {
             return mapToResponse(existingPayment.get());
         }
 
-        // 2. Fetch booking details
+        // 2. Fetch booking details (outside transaction)
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
@@ -61,31 +62,44 @@ public class PaymentService {
             maskedCard = "xxxx-xxxx-xxxx-" + rawCard.substring(rawCard.length() - 4);
         }
         
-        Payment payment = Payment.builder()
-                .bookingId(booking.getId())
-                .amount(request.getAmount())
-                .status(PaymentStatus.SUCCESS)
-                .transactionId(transactionId)
-                .idempotencyKey(idempotencyKey)
-                .partialCardNumber(maskedCard)
-                .build();
+        final String finalMaskedCard = maskedCard;
 
-        payment = paymentRepository.save(payment);
+        // Perform DB updates within a short-lived transaction
+        Payment payment = transactionTemplate.execute(status -> {
+            Booking b = bookingRepository.findById(request.getBookingId())
+                    .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+            
+            Payment newPayment = Payment.builder()
+                    .bookingId(b.getId())
+                    .amount(request.getAmount())
+                    .status(PaymentStatus.SUCCESS)
+                    .transactionId(transactionId)
+                    .idempotencyKey(idempotencyKey)
+                    .partialCardNumber(finalMaskedCard)
+                    .build();
 
-        // 4. Update Booking details and commit
-        booking.setPaymentId(payment.getId());
-        booking.setStatus(BookingStatus.CONFIRMED);
-        bookingRepository.save(booking);
+            newPayment = paymentRepository.save(newPayment);
 
-        // 5. Update seat status in event-service to BOOKED
+            b.setPaymentId(newPayment.getId());
+            b.setStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(b);
+
+            return newPayment;
+        });
+
+        // 5. Update seat status in event-service to BOOKED (network call, outside transaction)
         String seatUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
-        restTemplate.put(seatUrl + "/status?status=BOOKED", null);
+        try {
+            restTemplate.put(seatUrl + "/status?status=BOOKED", null);
+        } catch (Exception e) {
+            // log and continue
+        }
 
-        // 6. Release Redis hold lock explicitly
+        // 6. Release Redis hold lock explicitly (outside transaction)
         seatLockService.releaseLock(booking.getSeatId(), booking.getUserId());
 
-        // 7. Fetch user and event details to compile booking event details
-        String userUrl = "https://api-gateway:8080/api/auth/profile"; // fetch organiser profiles or profiles
+        // 7. Fetch user and event details to compile booking event details (network calls, outside transaction)
+        String userUrl = "https://api-gateway:8080/api/auth/profile";
         String eventUrl = "https://api-gateway:8080/api/events/" + booking.getEventId();
         String seatDetailsUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
 
@@ -107,7 +121,7 @@ public class PaymentService {
             // Log fallback
         }
 
-        // 8. Publish booking confirmation to Kafka
+        // 8. Publish booking confirmation to Kafka (outside transaction)
         BookingNotificationEvent notificationEvent = BookingNotificationEvent.builder()
                 .bookingId(booking.getId())
                 .userId(booking.getUserId())

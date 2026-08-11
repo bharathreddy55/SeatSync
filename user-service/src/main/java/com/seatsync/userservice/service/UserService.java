@@ -8,6 +8,7 @@ import com.seatsync.userservice.model.Role;
 import com.seatsync.userservice.model.User;
 import com.seatsync.userservice.repository.UserRepository;
 import com.seatsync.userservice.security.JwtTokenProvider;
+import com.seatsync.userservice.security.TokenBlacklistService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,13 +24,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager) {
+                       JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager,
+                       TokenBlacklistService tokenBlacklistService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationManager = authenticationManager;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -129,5 +133,10 @@ public class UserService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .build();
+    }
+
+    public void logout(String token) {
+        long lifespan = jwtTokenProvider.getRemainingLifespan(token);
+        tokenBlacklistService.blacklistToken(token, lifespan);
     }
 }

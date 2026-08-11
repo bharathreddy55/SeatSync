@@ -47,4 +47,12 @@ public class AuthController {
         }
         return ResponseEntity.ok(userService.getProfile(authentication.getName()));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            userService.logout(authHeader.substring(7));
+        }
+        return ResponseEntity.ok().build();
+    }
 }

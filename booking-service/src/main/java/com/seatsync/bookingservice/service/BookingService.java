@@ -6,8 +6,10 @@ import com.seatsync.bookingservice.model.Booking;
 import com.seatsync.bookingservice.model.BookingStatus;
 import com.seatsync.bookingservice.repository.BookingRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 import java.util.List;
 import java.util.Map;
@@ -19,23 +21,26 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final SeatLockService seatLockService;
     private final RestTemplate restTemplate;
+    private final TransactionTemplate transactionTemplate;
 
-    public BookingService(BookingRepository bookingRepository, SeatLockService seatLockService, RestTemplate restTemplate) {
+    public BookingService(BookingRepository bookingRepository, SeatLockService seatLockService,
+                          RestTemplate restTemplate, PlatformTransactionManager transactionManager) {
         this.bookingRepository = bookingRepository;
         this.seatLockService = seatLockService;
         this.restTemplate = restTemplate;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    @Transactional
+    @CircuitBreaker(name = "eventService", fallbackMethod = "createBookingFallback")
     public BookingResponse createBooking(BookingRequest request) {
-        // 1. Acquire Redis Distributed Lock to hold the seat
+        // 1. Acquire Redis Distributed Lock to hold the seat (outside transaction)
         boolean lockAcquired = seatLockService.acquireLock(request.getSeatId(), request.getUserId());
         if (!lockAcquired) {
             throw new IllegalStateException("Seat is currently held by another transaction or already booked.");
         }
 
         try {
-            // 2. Call event-service via gateway to verify seat status and set to HELD
+            // 2. Call event-service via gateway to verify seat status and set to HELD (outside transaction)
             String seatUrl = "https://api-gateway:8080/api/seats/" + request.getSeatId();
             Map<?, ?> seat = restTemplate.getForObject(seatUrl, Map.class);
             if (seat == null || !"AVAILABLE".equals(seat.get("status"))) {
@@ -43,18 +48,19 @@ public class BookingService {
                 throw new IllegalStateException("Seat is not available for booking.");
             }
 
-            // Update status in event-service to HELD
+            // Update status in event-service to HELD (outside transaction)
             restTemplate.put(seatUrl + "/status?status=HELD", null);
 
-            // 3. Create Booking record in local database
-            Booking booking = Booking.builder()
-                    .userId(request.getUserId())
-                    .eventId(request.getEventId())
-                    .seatId(request.getSeatId())
-                    .status(BookingStatus.PENDING)
-                    .build();
-
-            booking = bookingRepository.save(booking);
+            // 3. Create Booking record in local database inside a short-lived transaction
+            Booking booking = transactionTemplate.execute(status -> {
+                Booking newBooking = Booking.builder()
+                        .userId(request.getUserId())
+                        .eventId(request.getEventId())
+                        .seatId(request.getSeatId())
+                        .status(BookingStatus.PENDING)
+                        .build();
+                return bookingRepository.save(newBooking);
+            });
 
             return mapToResponse(booking);
         } catch (Exception e) {
@@ -82,7 +88,6 @@ public class BookingService {
         return mapToResponse(booking);
     }
 
-    @Transactional
     public BookingResponse cancelBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
@@ -91,20 +96,25 @@ public class BookingService {
             throw new IllegalStateException("Only pending bookings can be cancelled.");
         }
         
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepository.save(booking);
+        // Update booking status inside a short-lived transaction
+        Booking updatedBooking = transactionTemplate.execute(status -> {
+            Booking b = bookingRepository.findById(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+            b.setStatus(BookingStatus.CANCELLED);
+            return bookingRepository.save(b);
+        });
         
-        // Release lock and mark seat available in event-service
-        String seatUrl = "https://api-gateway:8080/api/seats/" + booking.getSeatId();
+        // Release lock and mark seat available in event-service (outside transaction)
+        String seatUrl = "https://api-gateway:8080/api/seats/" + updatedBooking.getSeatId();
         try {
             restTemplate.put(seatUrl + "/status?status=AVAILABLE", null);
         } catch (Exception e) {
             // log and continue
         }
         
-        seatLockService.releaseLock(booking.getSeatId(), booking.getUserId());
+        seatLockService.releaseLock(updatedBooking.getSeatId(), updatedBooking.getUserId());
         
-        return mapToResponse(booking);
+        return mapToResponse(updatedBooking);
     }
 
     private BookingResponse mapToResponse(Booking booking) {
@@ -117,5 +127,9 @@ public class BookingService {
                 .status(booking.getStatus().name())
                 .bookingTime(booking.getBookingTime())
                 .build();
+    }
+
+    public BookingResponse createBookingFallback(BookingRequest request, Throwable t) {
+        throw new IllegalStateException("Seat verification service is currently unavailable. Please try again later. (" + t.getMessage() + ")");
     }
 }

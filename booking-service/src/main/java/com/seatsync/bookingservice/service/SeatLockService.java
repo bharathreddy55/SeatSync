@@ -22,9 +22,16 @@ public class SeatLockService {
 
     public void releaseLock(Long seatId, Long userId) {
         String key = "seat:hold:" + seatId;
-        String val = redisTemplate.opsForValue().get(key);
-        if (String.valueOf(userId).equals(val)) {
-            redisTemplate.delete(key);
-        }
+        String val = String.valueOf(userId);
+        String script = "if redis.call('get', KEYS[1]) == ARGV[1] then " +
+                        "return redis.call('del', KEYS[1]) " +
+                        "else " +
+                        "return 0 " +
+                        "end";
+        redisTemplate.execute(
+            new org.springframework.data.redis.core.script.DefaultRedisScript<>(script, Long.class),
+            java.util.Collections.singletonList(key),
+            val
+        );
     }
 }

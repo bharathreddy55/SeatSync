@@ -19,6 +19,8 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+    listener:
+      ack-mode: manual
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
