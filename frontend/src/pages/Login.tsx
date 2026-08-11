@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../api';
 import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -18,7 +18,7 @@ export const Login: React.FC = () => {
     setError('');
     setSubmitting(true);
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await api.post('/api/auth/login', { email, password });
       login(response.data);
       navigate('/');
     } catch (err: any) {
