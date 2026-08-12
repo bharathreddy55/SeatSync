@@ -104,12 +104,17 @@ services:
     depends_on:
       - postgres-db
       - discovery-server
+      - redis
+      - kafka
     environment:
       DB_HOST: postgres-db
       DB_PORT: 5432
       DB_NAME: seatsync_user_db
       DB_USER: postgres
       DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     networks:
       - seatsync-network

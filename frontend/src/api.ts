@@ -54,4 +54,28 @@ api.interceptors.response.use(
   }
 );
 
+export const getErrorMessage = (err: any, fallback: string = 'An error occurred'): string => {
+  if (err.response?.data) {
+    const data = err.response.data;
+    if (typeof data === 'object') {
+      if (data.error) {
+        return data.error;
+      }
+      if (data.message) {
+        return data.message;
+      }
+      // Check for validation error map: { field: message }
+      const messages = Object.entries(data)
+        .map(([_, msg]) => `${msg}`)
+        .join(', ');
+      if (messages) {
+        return messages;
+      }
+    } else if (typeof data === 'string') {
+      return data;
+    }
+  }
+  return err.message || fallback;
+};
+
 export default api;

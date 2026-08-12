@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 import { UserPlus, Mail, Lock, User, AlertCircle, ShieldAlert } from 'lucide-react';
 
 export const Register: React.FC = () => {
@@ -24,7 +24,7 @@ export const Register: React.FC = () => {
       login(response.data);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Email already in use or invalid input');
+      setError(getErrorMessage(err, 'Email already in use or invalid input'));
     } finally {
       setSubmitting(false);
     }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 import { Lock, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
@@ -41,7 +41,7 @@ export const ResetPassword: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Token is invalid, expired, or server error occurred.');
+      setError(getErrorMessage(err, 'Token is invalid, expired, or server error occurred.'));
     } finally {
       setSubmitting(false);
     }

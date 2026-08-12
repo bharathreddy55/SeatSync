@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -22,7 +22,7 @@ export const Login: React.FC = () => {
       login(response.data);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      setError(getErrorMessage(err, 'Invalid email or password'));
     } finally {
       setSubmitting(false);
     }

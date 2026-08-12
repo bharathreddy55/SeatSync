@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api';
+import api, { getErrorMessage } from '../api';
 import { Mail, ArrowLeft, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
@@ -18,7 +18,7 @@ export const ForgotPassword: React.FC = () => {
       await api.post('/api/auth/forgot-password', { email });
       setSuccess(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to initiate password reset request. Please check the email.');
+      setError(getErrorMessage(err, 'Failed to initiate password reset request. Please check the email.'));
     } finally {
       setSubmitting(false);
     }
