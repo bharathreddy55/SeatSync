@@ -16,9 +16,9 @@ if (rawBaseURL && !rawBaseURL.startsWith('http://') && !rawBaseURL.startsWith('h
   }
 }
 
-const api = axios.create({
-  baseURL: rawBaseURL,
-});
+const api = axios.create(
+  rawBaseURL ? { baseURL: rawBaseURL } : {}
+);
 
 // Request interceptor to attach JWT token
 api.interceptors.request.use(
