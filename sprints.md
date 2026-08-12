@@ -18,7 +18,7 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Completed** | August 2026 |
 | **Sprint 9** | Event-Driven Authentication Recovery & Password Reset | **Completed** | August 2026 |
 | **Sprint 10** | API Hygiene: Validation & Centralized Error Handling | **Completed** | August 2026 |
-| **Sprint 11** | Quality Assurance: Unit Testing & Mockito Coverage | **Pending** | September 2026 |
+| **Sprint 11** | Quality Assurance: Unit Testing & Mockito Coverage | **Completed** | August 2026 |
 | **Sprint 12** | Observability: JPA Auditing & AOP Logging Aspect | **Pending** | October 2026 |
 
 ---
@@ -119,13 +119,13 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Implement a centralized `@RestControllerAdvice` class (e.g. `GlobalExceptionHandler`) in each microservice to handle `MethodArgumentNotValidException` and return formatted error lists.
 - [x] Configure `springdoc-openapi-starter-webmvc-ui` (Swagger) in the API Gateway and microservices to enable automated API documentation.
 
-### 🟥 Sprint 11: Quality Assurance: Unit Testing & Mockito Coverage (Pending)
+### 🟩 Sprint 11: Quality Assurance: Unit Testing & Mockito Coverage (Completed)
 *Focus: Build rigorous automated unit test coverage to ensure regression safety when making future code updates.*
 
-- [ ] Add JUnit 5 and Mockito testing dependencies to all microservice sub-modules.
-- [ ] Write service-level unit tests for `BookingService.java`, `PaymentService.java`, and `UserService.java` using Mockito mocks (`@Mock`, `@InjectMocks`).
-- [ ] Implement slice tests using `@WebMvcTest` for controllers (`AuthController.java`, `BookingController.java`) to test HTTP status mappings, validation constraints, and security filters.
-- [ ] Achieve a target of at least **80% code coverage** on core business logic classes.
+- [x] Add JUnit 5 and Mockito testing dependencies to all microservice sub-modules.
+- [x] Write service-level unit tests for `BookingService.java`, `PaymentService.java`, and `UserService.java` using Mockito mocks (`@Mock`, `@InjectMocks`).
+- [x] Implement slice tests using `@WebMvcTest` for controllers (`AuthController.java`, `BookingController.java`) to test HTTP status mappings, validation constraints, and security filters.
+- [x] Achieve a target of at least **80% code coverage** on core business logic classes.
 
 ### 🟥 Sprint 12: Observability: JPA Auditing & AOP Logging Aspect (Pending)
 *Focus: Track application history and construct method performance loggers without cluttering business logic.*
