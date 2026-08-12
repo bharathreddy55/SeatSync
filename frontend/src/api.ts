@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+let rawBaseURL = import.meta.env.VITE_API_BASE_URL || '';
+
+// Normalize common invalid configuration string fallbacks
+if (rawBaseURL === 'undefined' || rawBaseURL === 'null' || !rawBaseURL.trim()) {
+  rawBaseURL = '';
+}
+
+// If baseURL is a domain/host missing a protocol scheme, prepend the appropriate one
+if (rawBaseURL && !rawBaseURL.startsWith('http://') && !rawBaseURL.startsWith('https://') && !rawBaseURL.startsWith('/')) {
+  if (rawBaseURL.includes('localhost') || rawBaseURL.includes('127.0.0.1')) {
+    rawBaseURL = `http://${rawBaseURL}`;
+  } else {
+    rawBaseURL = `https://${rawBaseURL}`;
+  }
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: rawBaseURL,
 });
 
 // Request interceptor to attach JWT token
