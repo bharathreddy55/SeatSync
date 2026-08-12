@@ -17,6 +17,9 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 7** | Testing, CI/CD Pipelines & Kubernetes Deployment | **Completed** | August 2026 |
 | **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Completed** | August 2026 |
 | **Sprint 9** | Event-Driven Authentication Recovery & Password Reset | **Completed** | August 2026 |
+| **Sprint 10** | API Hygiene: Validation & Centralized Error Handling | **Pending** | September 2026 |
+| **Sprint 11** | Quality Assurance: Unit Testing & Mockito Coverage | **Pending** | September 2026 |
+| **Sprint 12** | Observability: JPA Auditing & AOP Logging Aspect | **Pending** | October 2026 |
 
 ---
 
@@ -107,3 +110,26 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Implement SimpleMailMessage SMTP reset email generation template inside `NotificationService.java`.
 - [x] Create `ForgotPassword.tsx` and `ResetPassword.tsx` components in the React frontend with full dark-theme Outfit aesthetics.
 - [x] Integrate navigation routes in `App.tsx` and link to `/forgot-password` from the Login form.
+
+### 🟥 Sprint 10: API Hygiene: Validation & Centralized Error Handling (Pending)
+*Focus: Introduce enterprise-grade input validation and standard API error mapping across microservices.*
+
+- [ ] Add `spring-boot-starter-validation` dependency to `user-service`, `booking-service`, and `event-service` pom files.
+- [ ] Add JSR-380 validation annotations (`@NotBlank`, `@Email`, `@Size`, `@Min`) to request DTOs (`RegisterRequest`, `LoginRequest`, `BookingRequest`, `PaymentRequest`).
+- [ ] Implement a centralized `@RestControllerAdvice` class (e.g. `GlobalExceptionHandler`) in each microservice to handle `MethodArgumentNotValidException` and return formatted error lists.
+- [ ] Configure `springdoc-openapi-starter-webmvc-ui` (Swagger) in the API Gateway and microservices to enable automated API documentation.
+
+### 🟥 Sprint 11: Quality Assurance: Unit Testing & Mockito Coverage (Pending)
+*Focus: Build rigorous automated unit test coverage to ensure regression safety when making future code updates.*
+
+- [ ] Add JUnit 5 and Mockito testing dependencies to all microservice sub-modules.
+- [ ] Write service-level unit tests for `BookingService.java`, `PaymentService.java`, and `UserService.java` using Mockito mocks (`@Mock`, `@InjectMocks`).
+- [ ] Implement slice tests using `@WebMvcTest` for controllers (`AuthController.java`, `BookingController.java`) to test HTTP status mappings, validation constraints, and security filters.
+- [ ] Achieve a target of at least **80% code coverage** on core business logic classes.
+
+### 🟥 Sprint 12: Observability: JPA Auditing & AOP Logging Aspect (Pending)
+*Focus: Track application history and construct method performance loggers without cluttering business logic.*
+
+- [ ] Enable Spring Data JPA Auditing (`@EnableJpaAuditing` and adding `@CreatedDate`/`@LastModifiedDate` annotations on base entity schemas).
+- [ ] Create a Spring AOP (Aspect-Oriented Programming) logging aspect to log method arguments and execution latency (in milliseconds) for all `@Service` layer operations.
+- [ ] Implement user profile activity history endpoints tracking recent booking status shifts and logouts.
