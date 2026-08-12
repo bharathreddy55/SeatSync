@@ -52,7 +52,7 @@ export const Events: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [monitoringLoading, setMonitoringLoading] = useState(false);
 
-  const isAdmin = user?.role === 'ORGANIZER';
+  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     fetchEvents();

@@ -72,6 +72,9 @@ services:
     container_name: seatsync-discovery
     ports:
       - "8761:8761"
+    environment:
+      SERVER_SSL_ENABLED: "false"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://localhost:8761/eureka/
     networks:
       - seatsync-network
 
