@@ -1,10 +1,14 @@
 package com.seatsync.bookingservice.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
+@EntityListeners(AuditingEntityListener.class)
 public class Payment {
 
     @Id
@@ -31,13 +35,13 @@ public class Payment {
     @Column(name = "idempotency_key", nullable = false, unique = true)
     private String idempotencyKey;
 
-    @Column(name = "payment_time", nullable = false)
+    @CreatedDate
+    @Column(name = "payment_time", nullable = false, updatable = false)
     private LocalDateTime paymentTime;
 
-    @PrePersist
-    protected void onCreate() {
-        this.paymentTime = LocalDateTime.now();
-    }
+    @LastModifiedDate
+    @Column(name = "last_modified_at")
+    private LocalDateTime lastModifiedAt;
 
     public Payment() {}
 

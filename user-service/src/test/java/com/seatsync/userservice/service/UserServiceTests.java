@@ -35,6 +35,9 @@ public class UserServiceTests {
     private UserRepository userRepository;
 
     @Mock
+    private com.seatsync.userservice.repository.UserActivityRepository userActivityRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock

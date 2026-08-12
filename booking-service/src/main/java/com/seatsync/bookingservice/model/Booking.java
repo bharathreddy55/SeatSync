@@ -1,10 +1,14 @@
 package com.seatsync.bookingservice.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
+@EntityListeners(AuditingEntityListener.class)
 public class Booking {
 
     @Id
@@ -27,13 +31,13 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
-    @Column(name = "booking_time", nullable = false)
+    @CreatedDate
+    @Column(name = "booking_time", nullable = false, updatable = false)
     private LocalDateTime bookingTime;
 
-    @PrePersist
-    protected void onCreate() {
-        this.bookingTime = LocalDateTime.now();
-    }
+    @LastModifiedDate
+    @Column(name = "last_modified_at")
+    private LocalDateTime lastModifiedAt;
 
     public Booking() {}
 

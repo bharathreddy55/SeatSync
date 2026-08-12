@@ -19,7 +19,7 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 9** | Event-Driven Authentication Recovery & Password Reset | **Completed** | August 2026 |
 | **Sprint 10** | API Hygiene: Validation & Centralized Error Handling | **Completed** | August 2026 |
 | **Sprint 11** | Quality Assurance: Unit Testing & Mockito Coverage | **Completed** | August 2026 |
-| **Sprint 12** | Observability: JPA Auditing & AOP Logging Aspect | **Pending** | October 2026 |
+| **Sprint 12** | Observability: JPA Auditing & AOP Logging Aspect | **Completed** | August 2026 |
 
 ---
 
@@ -127,9 +127,9 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Implement slice tests using `@WebMvcTest` for controllers (`AuthController.java`, `BookingController.java`) to test HTTP status mappings, validation constraints, and security filters.
 - [x] Achieve a target of at least **80% code coverage** on core business logic classes.
 
-### 🟥 Sprint 12: Observability: JPA Auditing & AOP Logging Aspect (Pending)
+### 🟩 Sprint 12: Observability: JPA Auditing & AOP Logging Aspect (Completed)
 *Focus: Track application history and construct method performance loggers without cluttering business logic.*
 
-- [ ] Enable Spring Data JPA Auditing (`@EnableJpaAuditing` and adding `@CreatedDate`/`@LastModifiedDate` annotations on base entity schemas).
-- [ ] Create a Spring AOP (Aspect-Oriented Programming) logging aspect to log method arguments and execution latency (in milliseconds) for all `@Service` layer operations.
-- [ ] Implement user profile activity history endpoints tracking recent booking status shifts and logouts.
+- [x] Enable Spring Data JPA Auditing (`@EnableJpaAuditing` configuration class and adding `@CreatedDate`/`@LastModifiedDate` annotations on base entity schemas).
+- [x] Create a Spring AOP (Aspect-Oriented Programming) logging aspect to log method arguments and execution latency (in milliseconds) for all `@Service` operations.
+- [x] Implement user profile activity history endpoints tracking recent booking status shifts and logouts.

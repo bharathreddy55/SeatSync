@@ -7,7 +7,9 @@ import com.seatsync.userservice.dto.UserResponse;
 import com.seatsync.userservice.dto.PasswordResetEvent;
 import com.seatsync.userservice.model.Role;
 import com.seatsync.userservice.model.User;
+import com.seatsync.userservice.model.UserActivity;
 import com.seatsync.userservice.repository.UserRepository;
+import com.seatsync.userservice.repository.UserActivityRepository;
 import com.seatsync.userservice.security.JwtTokenProvider;
 import com.seatsync.userservice.security.TokenBlacklistService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +21,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserActivityRepository userActivityRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
@@ -33,11 +37,12 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       JwtTokenProvider jwtTokenProvider, AuthenticationManager authenticationManager,
-                       TokenBlacklistService tokenBlacklistService, StringRedisTemplate redisTemplate,
-                       KafkaTemplate<String, Object> kafkaTemplate) {
+    public UserService(UserRepository userRepository, UserActivityRepository userActivityRepository,
+                       PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider,
+                       AuthenticationManager authenticationManager, TokenBlacklistService tokenBlacklistService,
+                       StringRedisTemplate redisTemplate, KafkaTemplate<String, Object> kafkaTemplate) {
         this.userRepository = userRepository;
+        this.userActivityRepository = userActivityRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationManager = authenticationManager;
@@ -69,6 +74,7 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
+        userActivityRepository.save(new UserActivity(user.getEmail(), "REGISTER"));
 
         return authenticateAndBuildResponse(user.getEmail());
     }
@@ -77,6 +83,8 @@ public class UserService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
+
+        userActivityRepository.save(new UserActivity(request.getEmail(), "LOGIN"));
 
         return authenticateAndBuildResponse(request.getEmail());
     }
@@ -146,6 +154,8 @@ public class UserService {
     }
 
     public void logout(String token) {
+        String email = jwtTokenProvider.extractUsername(token);
+        userActivityRepository.save(new UserActivity(email, "LOGOUT"));
         long lifespan = jwtTokenProvider.getRemainingLifespan(token);
         tokenBlacklistService.blacklistToken(token, lifespan);
     }
@@ -162,6 +172,8 @@ public class UserService {
         // Publish event to Kafka
         PasswordResetEvent event = new PasswordResetEvent(user.getEmail(), user.getName(), token);
         kafkaTemplate.send("password-resets", event);
+
+        userActivityRepository.save(new UserActivity(email, "PASSWORD_RESET_INITIATED"));
     }
 
     public void completePasswordReset(String token, String newPassword) {
@@ -178,5 +190,11 @@ public class UserService {
 
         // Clean up token
         redisTemplate.delete("password:reset:" + token);
+
+        userActivityRepository.save(new UserActivity(email, "PASSWORD_RESET_COMPLETED"));
+    }
+
+    public List<UserActivity> getUserActivities(String email) {
+        return userActivityRepository.findByEmailOrderByTimestampDesc(email);
     }
 }

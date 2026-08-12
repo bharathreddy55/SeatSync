@@ -14,6 +14,9 @@ import jakarta.validation.Valid;
 
 import java.util.Map;
 
+import com.seatsync.userservice.model.UserActivity;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -49,6 +52,14 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(userService.getProfile(authentication.getName()));
+    }
+
+    @GetMapping("/activities")
+    public ResponseEntity<List<UserActivity>> getActivities(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(userService.getUserActivities(authentication.getName()));
     }
 
     @PostMapping("/logout")
