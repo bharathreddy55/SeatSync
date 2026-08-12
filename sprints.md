@@ -17,7 +17,7 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 | **Sprint 7** | Testing, CI/CD Pipelines & Kubernetes Deployment | **Completed** | August 2026 |
 | **Sprint 8** | Production Readiness, Security Refactoring & Resiliency | **Completed** | August 2026 |
 | **Sprint 9** | Event-Driven Authentication Recovery & Password Reset | **Completed** | August 2026 |
-| **Sprint 10** | API Hygiene: Validation & Centralized Error Handling | **Pending** | September 2026 |
+| **Sprint 10** | API Hygiene: Validation & Centralized Error Handling | **Completed** | August 2026 |
 | **Sprint 11** | Quality Assurance: Unit Testing & Mockito Coverage | **Pending** | September 2026 |
 | **Sprint 12** | Observability: JPA Auditing & AOP Logging Aspect | **Pending** | October 2026 |
 
@@ -111,13 +111,13 @@ This document tracks the completed and pending sprints for **SeatSync**, a high-
 - [x] Create `ForgotPassword.tsx` and `ResetPassword.tsx` components in the React frontend with full dark-theme Outfit aesthetics.
 - [x] Integrate navigation routes in `App.tsx` and link to `/forgot-password` from the Login form.
 
-### 🟥 Sprint 10: API Hygiene: Validation & Centralized Error Handling (Pending)
+### 🟩 Sprint 10: API Hygiene: Validation & Centralized Error Handling (Completed)
 *Focus: Introduce enterprise-grade input validation and standard API error mapping across microservices.*
 
-- [ ] Add `spring-boot-starter-validation` dependency to `user-service`, `booking-service`, and `event-service` pom files.
-- [ ] Add JSR-380 validation annotations (`@NotBlank`, `@Email`, `@Size`, `@Min`) to request DTOs (`RegisterRequest`, `LoginRequest`, `BookingRequest`, `PaymentRequest`).
-- [ ] Implement a centralized `@RestControllerAdvice` class (e.g. `GlobalExceptionHandler`) in each microservice to handle `MethodArgumentNotValidException` and return formatted error lists.
-- [ ] Configure `springdoc-openapi-starter-webmvc-ui` (Swagger) in the API Gateway and microservices to enable automated API documentation.
+- [x] Add `spring-boot-starter-validation` dependency to `user-service`, `booking-service`, and `event-service` pom files.
+- [x] Add JSR-380 validation annotations (`@NotBlank`, `@Email`, `@Size`, `@Min`) to request DTOs (`RegisterRequest`, `LoginRequest`, `ForgotPasswordRequest`, `ResetPasswordRequest`, `BookingRequest`, `PaymentRequest`).
+- [x] Implement a centralized `@RestControllerAdvice` class (e.g. `GlobalExceptionHandler`) in each microservice to handle `MethodArgumentNotValidException` and return formatted error lists.
+- [x] Configure `springdoc-openapi-starter-webmvc-ui` (Swagger) in the API Gateway and microservices to enable automated API documentation.
 
 ### 🟥 Sprint 11: Quality Assurance: Unit Testing & Mockito Coverage (Pending)
 *Focus: Build rigorous automated unit test coverage to ensure regression safety when making future code updates.*

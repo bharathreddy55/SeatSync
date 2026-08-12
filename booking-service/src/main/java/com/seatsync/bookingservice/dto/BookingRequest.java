@@ -1,8 +1,15 @@
 package com.seatsync.bookingservice.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class BookingRequest {
+    @NotNull(message = "User ID is required")
     private Long userId;
+
+    @NotNull(message = "Event ID is required")
     private Long eventId;
+
+    @NotNull(message = "Seat ID is required")
     private Long seatId;
 
     public BookingRequest() {}

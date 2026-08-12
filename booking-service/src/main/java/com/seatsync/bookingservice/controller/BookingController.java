@@ -5,6 +5,7 @@ import com.seatsync.bookingservice.dto.BookingResponse;
 import com.seatsync.bookingservice.service.BookingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -18,7 +19,7 @@ public class BookingController {
     }
 
     @PostMapping({"", "/book"})
-    public ResponseEntity<BookingResponse> createBooking(@RequestBody BookingRequest request) {
+    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest request) {
         return ResponseEntity.ok(bookingService.createBooking(request));
     }
 

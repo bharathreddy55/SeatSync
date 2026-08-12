@@ -5,6 +5,7 @@ import com.seatsync.bookingservice.dto.PaymentResponse;
 import com.seatsync.bookingservice.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -18,7 +19,7 @@ public class PaymentController {
 
     @PostMapping
     public ResponseEntity<PaymentResponse> processPayment(
-            @RequestBody PaymentRequest request,
+            @Valid @RequestBody PaymentRequest request,
             @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
         if (idempotencyKey == null || idempotencyKey.trim().isEmpty()) {
