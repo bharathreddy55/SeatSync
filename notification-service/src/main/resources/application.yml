@@ -12,6 +12,10 @@ spring:
     name: notification-service
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     consumer:
       group-id: notification-group
       auto-offset-reset: earliest
@@ -38,7 +42,7 @@ eureka:
     securePort: ${server.port}
   client:
     serviceUrl:
-      defaultZone: https://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:https://localhost:8761/eureka/}
 
 management:
   endpoints:

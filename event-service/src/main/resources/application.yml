@@ -11,7 +11,7 @@ spring:
   application:
     name: event-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:seatsync_event_db}
+    url: ${SPRING_DATASOURCE_URL:${EVENT_DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:seatsync_event_db}}}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
   jpa:
@@ -25,6 +25,9 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
   cache:
     type: redis
 
@@ -35,7 +38,7 @@ eureka:
     securePort: ${server.port}
   client:
     serviceUrl:
-      defaultZone: https://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:https://localhost:8761/eureka/}
 
 management:
   endpoints:
