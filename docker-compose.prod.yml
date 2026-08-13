@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # Zookeeper for local Kafka coordinator
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: seatsync-zookeeper-prod
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Kafka Broker for inter-service messaging
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: seatsync-kafka-prod
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Spring Cloud Eureka Discovery Server
+  discovery-server:
+    build:
+      context: .
+      dockerfile: discovery-server/Dockerfile
+    container_name: seatsync-discovery-prod
+    environment:
+      SERVER_SSL_ENABLED: "false"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://localhost:8761/eureka/
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Spring Cloud API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: seatsync-gateway-prod
+    ports:
+      - "8085:8080"
+    depends_on:
+      - discovery-server
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      REDIS_HOST: calm-baboon-152050.upstash.io
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: gQAAAAAAAlHyAAIgcDJjMTZjZmUwMTdmZmY0NTBhODNmNzU2OTk3NWEyMzc5YQ
+      REDIS_SSL_ENABLED: "true"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # User Service (Neon DB + Upstash Redis)
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: seatsync-user-service-prod
+    depends_on:
+      - discovery-server
+      - kafka
+    environment:
+      USER_DB_URL: jdbc:postgresql://ep-green-sunset-az377eth-pooler.c-3.ap-southeast-1.aws.neon.tech/seatsync_user_db?sslmode=require
+      DB_USER: neondb_owner
+      DB_PASSWORD: npg_4OQ9qbWsENmv
+      REDIS_HOST: calm-baboon-152050.upstash.io
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: gQAAAAAAAlHyAAIgcDJjMTZjZmUwMTdmZmY0NTBhODNmNzU2OTk3NWEyMzc5YQ
+      REDIS_SSL_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -Xmx350m"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Event Service (Neon DB + Upstash Redis)
+  event-service:
+    build:
+      context: .
+      dockerfile: event-service/Dockerfile
+    container_name: seatsync-event-service-prod
+    depends_on:
+      - discovery-server
+    environment:
+      EVENT_DB_URL: jdbc:postgresql://ep-green-sunset-az377eth-pooler.c-3.ap-southeast-1.aws.neon.tech/seatsync_event_db?sslmode=require
+      DB_USER: neondb_owner
+      DB_PASSWORD: npg_4OQ9qbWsENmv
+      REDIS_HOST: calm-baboon-152050.upstash.io
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: gQAAAAAAAlHyAAIgcDJjMTZjZmUwMTdmZmY0NTBhODNmNzU2OTk3NWEyMzc5YQ
+      REDIS_SSL_ENABLED: "true"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -Xmx350m"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Booking Service (Neon DB + Upstash Redis + Local Kafka)
+  booking-service:
+    build:
+      context: .
+      dockerfile: booking-service/Dockerfile
+    container_name: seatsync-booking-service-prod
+    depends_on:
+      - discovery-server
+      - kafka
+    environment:
+      BOOKING_DB_URL: jdbc:postgresql://ep-green-sunset-az377eth-pooler.c-3.ap-southeast-1.aws.neon.tech/seatsync_booking_db?sslmode=require
+      DB_USER: neondb_owner
+      DB_PASSWORD: npg_4OQ9qbWsENmv
+      REDIS_HOST: calm-baboon-152050.upstash.io
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: gQAAAAAAAlHyAAIgcDJjMTZjZmUwMTdmZmY0NTBhODNmNzU2OTk3NWEyMzc5YQ
+      REDIS_SSL_ENABLED: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SERVICES_EVENT-SERVICE_URL: http://event-service
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -Xmx350m"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # Notification Service (Local Kafka + MailDev)
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    container_name: seatsync-notification-service-prod
+    depends_on:
+      - discovery-server
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      MAIL_HOST: maildev
+      MAIL_PORT: 1025
+      JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -Xmx250m"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+  # MailDev to view outbound registration emails
+  maildev:
+    image: maildev/maildev
+    container_name: seatsync-maildev-prod
+    ports:
+      - "1080:1080"
+    networks:
+      - seatsync-network-prod
+    restart: always
+
+networks:
+  seatsync-network-prod:
+    driver: bridge
